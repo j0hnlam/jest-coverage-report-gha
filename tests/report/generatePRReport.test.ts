@@ -55,14 +55,14 @@ describe('generatePRReport', () => {
             } as unknown) as ReturnType<typeof getOctokit>
         );
 
-        expect(createComment).toBeCalledWith({
+        expect(createComment).toHaveBeenCalledWith({
             owner: 'bot',
             repo: 'test-repository',
             body: 'Report body',
             issue_number: 7,
         });
 
-        expect(updateComment).not.toBeCalled();
+        expect(updateComment).not.toHaveBeenCalled();
     });
 
     it('should update old report', async () => {
@@ -96,13 +96,13 @@ describe('generatePRReport', () => {
             } as unknown) as ReturnType<typeof getOctokit>
         );
 
-        expect(updateComment).toBeCalledWith({
+        expect(updateComment).toHaveBeenCalledWith({
             owner: 'bot',
             repo: 'test-repository',
             body: 'Report body',
             comment_id: 15,
         });
 
-        expect(createComment).not.toBeCalled();
+        expect(createComment).not.toHaveBeenCalled();
     });
 });

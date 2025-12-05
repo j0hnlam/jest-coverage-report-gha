@@ -2,7 +2,6 @@ import * as allCore from '@actions/core';
 import * as all from '@actions/github';
 import { getOctokit } from '@actions/github';
 import { loadConfig } from 'c12';
-import { mocked } from 'ts-jest/utils';
 
 import { Annotation } from '../src/annotations/Annotation';
 import { createCoverageAnnotations } from '../src/annotations/createCoverageAnnotations';
@@ -223,13 +222,13 @@ jest.mock('../src/annotations/createCoverageAnnotations.ts');
 jest.mock('../src/format/annotations/formatFailedTestsAnnotations.ts');
 jest.mock('../src/format/annotations/formatCoverageAnnotations.ts');
 
-const getOptionsMock = mocked(getOptions);
-const getCoverageMock = mocked(getCoverage);
-const switchBranchMock = mocked(switchBranch);
-const getCurrentBranchMock = mocked(getCurrentBranch);
-const checkoutRefMock = mocked(checkoutRef);
-const createReportMock = mocked(createReport);
-const loadConfigMock = mocked(loadConfig);
+const getOptionsMock = jest.mocked(getOptions);
+const getCoverageMock = jest.mocked(getCoverage);
+const switchBranchMock = jest.mocked(switchBranch);
+const getCurrentBranchMock = jest.mocked(getCurrentBranch);
+const checkoutRefMock = jest.mocked(checkoutRef);
+const createReportMock = jest.mocked(createReport);
+const loadConfigMock = jest.mocked(loadConfig);
 
 (getOctokit as jest.Mock<any, any>).mockReturnValue({
     rest: {
@@ -276,17 +275,23 @@ describe('run', () => {
                 },
             },
         });
+        // Ensure getOptionsMock resolves to valid options for all tests except the failure test
+        getOptionsMock.mockResolvedValue(defaultOptions);
     });
     it('should fail if not initialized', async () => {
         getOptionsMock.mockRejectedValue({});
-        await expect(run()).rejects.toThrowError('Initialization failed.');
+        await expect(run()).rejects.toThrow(
+            new Error('Initialization failed.')
+        );
+        // Restore for other tests
+        getOptionsMock.mockResolvedValue(defaultOptions);
     });
 
     it('should run in PR', async () => {
         const dataCollector = createDataCollector<JsonReport>();
         const dataCollectorAddSpy = jest.spyOn(dataCollector, 'add');
         await run(dataCollector);
-        expect(getCoverageMock).toBeCalledTimes(2);
+        expect(getCoverageMock).toHaveBeenCalledTimes(2);
         expect(checkoutRefMock.mock.calls[0]).toEqual([
             defaultOptions.pullRequest?.head,
             'covbot-pr-head-remote',
@@ -297,8 +302,8 @@ describe('run', () => {
             'covbot-pr-base-remote',
             'covbot/pr-base',
         ]);
-        expect(switchBranchMock).toBeCalledWith('test-branch');
-        expect(dataCollectorAddSpy).toBeCalledTimes(2);
+        expect(switchBranchMock).toHaveBeenCalledWith('test-branch');
+        expect(dataCollectorAddSpy).toHaveBeenCalledTimes(2);
     });
 
     it('should skip if report is not generated', async () => {
@@ -306,7 +311,7 @@ describe('run', () => {
             throw new Error();
         });
         await run();
-        expect(getCoverageMock).toBeCalledTimes(2);
+        expect(getCoverageMock).toHaveBeenCalledTimes(2);
         expect(checkoutRefMock.mock.calls[0]).toEqual([
             defaultOptions.pullRequest?.head,
             'covbot-pr-head-remote',
@@ -317,7 +322,7 @@ describe('run', () => {
             'covbot-pr-base-remote',
             'covbot/pr-base',
         ]);
-        expect(switchBranchMock).toBeCalledWith('test-branch');
+        expect(switchBranchMock).toHaveBeenCalledWith('test-branch');
     });
 
     it('should skip if headCoverage is not generated', async () => {
@@ -325,7 +330,7 @@ describe('run', () => {
         const dataCollectorAddSpy = jest.spyOn(dataCollector, 'add');
         getCoverageMock.mockRejectedValue('');
         await run(dataCollector);
-        expect(dataCollectorAddSpy).toBeCalledTimes(0);
+        expect(dataCollectorAddSpy).toHaveBeenCalledTimes(0);
     });
 
     it('should set failed if there are errors in dataCollector', async () => {
@@ -338,7 +343,9 @@ describe('run', () => {
             errors: [new Error('error')],
         } as CollectedData<JsonReport>);
         await run(dataCollectorMock);
-        expect(setFailed).toBeCalledWith('Jest coverage report action failed');
+        expect(setFailed).toHaveBeenCalledWith(
+            'Jest coverage report action failed'
+        );
     });
 
     it('should succeed if there are no errors in dataCollector', async () => {
@@ -351,7 +358,7 @@ describe('run', () => {
             errors: [],
         } as unknown) as CollectedData<JsonReport>);
         await run(dataCollectorMock);
-        expect(setFailed).not.toBeCalled();
+        expect(setFailed).not.toHaveBeenCalled();
     });
 
     it('should run if not in PR and no pr-number is supplied', async () => {
@@ -365,10 +372,10 @@ describe('run', () => {
             payload: {},
         });
         await run();
-        expect(getCoverageMock).toBeCalledTimes(1);
-        expect(checkoutRefMock).not.toBeCalled();
-        expect(checkoutRefMock).not.toBeCalled();
-        expect(switchBranchMock).not.toBeCalled();
+        expect(getCoverageMock).toHaveBeenCalledTimes(1);
+        expect(checkoutRefMock).not.toHaveBeenCalled();
+        expect(checkoutRefMock).not.toHaveBeenCalled();
+        expect(switchBranchMock).not.toHaveBeenCalled();
     });
 
     it('should run if not in PR and pr-number is supplied', async () => {
@@ -379,7 +386,7 @@ describe('run', () => {
         const dataCollector = createDataCollector<JsonReport>();
         const dataCollectorAddSpy = jest.spyOn(dataCollector, 'add');
         await run(dataCollector);
-        expect(getCoverageMock).toBeCalledTimes(2);
+        expect(getCoverageMock).toHaveBeenCalledTimes(2);
         expect(checkoutRefMock.mock.calls[0]).toEqual([
             defaultOptions.pullRequest?.head,
             'covbot-pr-head-remote',
@@ -390,16 +397,16 @@ describe('run', () => {
             'covbot-pr-base-remote',
             'covbot/pr-base',
         ]);
-        expect(switchBranchMock).toBeCalledWith('test-branch');
-        expect(dataCollectorAddSpy).toBeCalledTimes(2);
+        expect(switchBranchMock).toHaveBeenCalledWith('test-branch');
+        expect(dataCollectorAddSpy).toHaveBeenCalledTimes(2);
     });
 
     describe('failedAnnotations', () => {
-        const createFailedTestsAnnotationsMock = mocked(
+        const createFailedTestsAnnotationsMock = jest.mocked(
             createFailedTestsAnnotations
         );
 
-        const formatFailedTestsAnnotationsMock = mocked(
+        const formatFailedTestsAnnotationsMock = jest.mocked(
             formatFailedTestsAnnotations
         );
 
@@ -414,7 +421,7 @@ describe('run', () => {
                 annotations: 'coverage',
             });
             await run();
-            expect(createFailedTestsAnnotationsMock).not.toBeCalled();
+            expect(createFailedTestsAnnotationsMock).not.toHaveBeenCalled();
         });
 
         it('should generate failed test annotations', async () => {
@@ -422,13 +429,17 @@ describe('run', () => {
                 {} as Annotation,
             ]);
             await run();
-            expect(formatFailedTestsAnnotationsMock).toBeCalled();
+            expect(formatFailedTestsAnnotationsMock).toHaveBeenCalled();
         });
     });
 
     describe('coverageAnnotations', () => {
-        const createCoverageAnnotationsMock = mocked(createCoverageAnnotations);
-        const formatCoverageAnnotationsMock = mocked(formatCoverageAnnotations);
+        const createCoverageAnnotationsMock = jest.mocked(
+            createCoverageAnnotations
+        );
+        const formatCoverageAnnotationsMock = jest.mocked(
+            formatCoverageAnnotations
+        );
 
         beforeEach(() => {
             createCoverageAnnotationsMock.mockClear();
@@ -441,7 +452,7 @@ describe('run', () => {
                 annotations: 'failed-tests',
             });
             await run();
-            expect(createCoverageAnnotationsMock).not.toBeCalled();
+            expect(createCoverageAnnotationsMock).not.toHaveBeenCalled();
         });
     });
 });

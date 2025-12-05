@@ -37,7 +37,7 @@ export const run = async (
     const isInPR = !!options?.pullRequest;
 
     if (!isInitialized || !options) {
-        throw Error('Initialization failed.');
+        throw new Error('Initialization failed.');
     }
 
     const [isThresholdParsed, threshold] = await runStage(
